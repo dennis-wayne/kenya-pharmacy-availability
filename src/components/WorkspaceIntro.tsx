@@ -18,7 +18,7 @@ const intros: Record<
     eyebrow: "Evidence & limitations",
     title: "Understand the confidence.",
     description:
-      "Understand what the data can support before acting on it. Product matches and reference coverage have limits; collection dates are inferred.",
+      "Understand what the data can support before acting on it. Check capture dates, source evidence and the limits of product matching and reference coverage.",
   },
 };
 export default function WorkspaceIntro({ view }: { view: string }) {

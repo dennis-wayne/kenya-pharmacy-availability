@@ -68,7 +68,7 @@ export default function Sources({ store, onNavigate, setFilters }) {
             listings · <span className="num">{meta.run.snapshot_id}</span>
           </p>
           <small>
-            Collection dates are inferred. This is a captured snapshot, not live
+            {meta.run.snapshot_at_inferred ? 'Collection dates are inferred. ' : 'Capture times are recorded. '}This is a captured snapshot, not live
             shelf inventory.
           </small>
         </div>

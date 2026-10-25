@@ -26,6 +26,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { DuckDBInstance } from '@duckdb/node-api';
+import { sourceBit } from './source-bits.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -93,10 +94,13 @@ const pharmacies = await Q(`
   ORDER BY present_in_snapshot DESC, listings DESC
 `);
 
-// Bit position per pharmacy. 15 present shops fit in a uint16 with room spare.
+// The expanded panel needs more than 16 bits. Reserve the sign bit so URL
+// filter masks remain positive JavaScript integers.
 const present = pharmacies.filter((p) => p.present_in_snapshot);
-const bitOf = new Map(present.map((p, i) => [p.pharmacy_id, i]));
-present.forEach((p, i) => { p.bit = i; });
+if(present.length>31)throw new Error('Source masks support at most 31 active pharmacies');
+const bitOf = new Map(present.map((p) => [p.pharmacy_id, sourceBit(p.pharmacy_id)]));
+const shopIndexOf = new Map(present.map((p, i) => [p.pharmacy_id, i]));
+present.forEach((p) => { p.bit = bitOf.get(p.pharmacy_id); });
 
 /* --------------------------------------------------------------- products */
 
@@ -119,9 +123,9 @@ const products = await Q(`
 const keyToIdx = new Map(products.map((p, i) => [p.product_key, i]));
 
 // Masks and per-shop prices, built from the observations in one pass.
-const listedMask = new Uint16Array(products.length);
-const inMask = new Uint16Array(products.length);
-const oosMask = new Uint16Array(products.length);
+const listedMask = new Uint32Array(products.length);
+const inMask = new Uint32Array(products.length);
+const oosMask = new Uint32Array(products.length);
 const categoryBits = products.map(() => new Set());
 
 const obs = await Q(`
@@ -159,7 +163,7 @@ for (const o of obs) {
   if (o.category_raw) categoryBits[pi].add(catDict.put(o.category_raw));
 
   lProduct[n] = pi;
-  lShop[n] = bit;
+  lShop[n] = shopIndexOf.get(o.pharmacy_id);
   lState[n] = STATE_CODE[o.stock_evidence] ?? 2;
   lPrice[n] = o.price_kes ?? 0;
   lRawName[n] = rawNameDict.put(o.raw_name);

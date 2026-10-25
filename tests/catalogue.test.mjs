@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { loadStore, loadListings, listingsFor, popcount } from '../src/lib/store.js';
-import { EMPTY, runFilter, encodeFilters, decodeFilters, facetCounts, inStockCoverage } from '../src/lib/filters.js';
+import { EMPTY, runFilter, encodeFilters, decodeFilters, facetCounts, inStockCoverage, shopCounts, sourceBreakdown } from '../src/lib/filters.js';
 import { buildCsv } from '../src/lib/export.js';
 const payloads = Object.fromEntries(await Promise.all(['meta','products','listings'].map(async name => [name, JSON.parse(await readFile(new URL(`../static/app/${name}.json`, import.meta.url), 'utf8'))])));
 const calls = [];
@@ -16,7 +16,7 @@ globalThis.fetch = async url => {
 const store = await loadStore();
 const expected = predicate => Array.from({length:store.P.n},(_,i)=>i).filter(predicate).sort((a,b)=>a-b);
 const actual = filters => runFilter(store, {...EMPTY,...filters}).rows.sort((a,b)=>a-b);
-const bits = mask => Array.from({length:16},(_,bit)=>!!(mask & (1<<bit))).filter(Boolean).length;
+const bits = mask => Array.from({length:32},(_,bit)=>!!(mask & (1<<bit))).filter(Boolean).length;
 
 test('16-bit population counts match independent bit iteration across every mask', () => {
   for(let value=0;value<=65535;value++) assert.equal(popcount(value),bits(value));
@@ -38,8 +38,28 @@ test('ANY and ALL pharmacy masks remain distinct', () => {
 test('broad in-stock coverage excludes raw availability from non-reporting sources',()=>{
   const covered=inStockCoverage(store,Array.from({length:store.P.n},(_,i)=>i));
   assert.deepEqual([...covered].sort((a,b)=>a-b),expected(i=>bits(store.P.inMask[i])>=5));
-  assert.equal(covered.length,11);assert.equal(covered.filter(i=>store.P.clinical[i]).length,3);
-  assert.equal(store.P.nIn.filter(n=>n>=5).length,126,'Legacy raw aggregate remains intact for CSV compatibility');
+  assert.deepEqual(covered.filter(i=>store.P.clinical[i]).sort((a,b)=>a-b),expected(i=>store.P.clinical[i]===1&&bits(store.P.inMask[i])>=5));
+  assert.deepEqual(Array.from(store.P.nIn),payloads.products.nIn,'Raw aggregate remains intact for CSV compatibility');
+});
+test('source facets use permanent bits even when absent sources leave gaps',()=>{
+  const counts=shopCounts(store,EMPTY,'shopsAny');
+  const breakdown=sourceBreakdown(store,Array.from({length:store.P.n},(_,i)=>i));
+  for(const source of store.shops){
+    const bit=1<<source.bit;
+    assert.equal(counts.listed[source.bit],expected(i=>(store.P.listedMask[i]&bit)!==0).length);
+    assert.deepEqual(actual({shopsAny:[source.bit]}),expected(i=>(store.P.listedMask[i]&bit)!==0));
+    assert.equal(breakdown.find(r=>r.shop.pharmacy_id===source.pharmacy_id).listed,counts.listed[source.bit]);
+  }
+});
+test('listing source indexes resolve separately from source filter bits',async()=>{
+  await loadListings(store);const counts=new Map();
+  for(let row=0;row<store.listings.count;row++){
+    const source=store.shops[store.listings.shop[row]];
+    assert.ok(source);
+    assert.ok(store.P.listedMask[store.listings.product[row]]&(1<<source.bit));
+    counts.set(source.pharmacy_id,(counts.get(source.pharmacy_id)||0)+1);
+  }
+  for(const source of store.shops)assert.equal(counts.get(source.pharmacy_id),source.listings);
 });
 test('stock filters use judged evidence masks and compose with clinical and price bounds', () => {
   const reporting = store.shops.filter(s=>s.publishes_oos).map(s=>s.bit);
@@ -73,6 +93,7 @@ test('CSV retains columns, filtered membership, blank prices, state labels and q
   assert.ok(!escaped.includes('NaN'));
 });
 test('listing requests deduplicate, retain source evidence and recover after failure',async()=>{
+  store.listings=null;
   const original=globalThis.fetch;
   let n=0;
   globalThis.fetch=async url=>{n++; if(n<=2) throw new Error('temporary offline'); return original(url);};

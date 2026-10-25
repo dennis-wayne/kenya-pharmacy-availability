@@ -630,7 +630,7 @@ function Detail({ store, i, onClose, onPick, tip }) {
           <div className="product-context-sources"><span>{P.nListed[i]} pharmacies listing</span><PharmacyStack shops={namedSources}/><p>of {store.shops.length} captured sources</p></div>
           <dl className="product-context-stock"><div><dt>Report in stock</dt><dd className="num" data-state="in">{popcount(P.inMask[i])}</dd></div><div><dt>Report out of stock</dt><dd className="num" data-state="out">{popcount(P.oosMask[i])}</dd></div><div><dt>Stock-reporting sources</dt><dd className="num">{P.nEligible[i]}</dd></div></dl>
           <div className="product-context-match"><span>Product match</span><strong className="num">{P.matchConf[i].toFixed(3)}</strong><small>{D.matchBand[P.matchBand[i]]} confidence · inspect identity tab</small></div>
-          <p className="product-context-note"><Icon name="clock" size={16}/>Snapshot evidence. Collection date inferred; confirm current stock and price with the pharmacy.</p>
+          <p className="product-context-note"><Icon name="clock" size={16}/>Captured snapshot evidence; confirm current stock and price with the pharmacy.</p>
         </aside>
       </div>
     </Modal>

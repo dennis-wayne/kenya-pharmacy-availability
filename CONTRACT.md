@@ -8,6 +8,14 @@ retype them without a major version bump.
 build (the `CONTRACT` group), so a backend change fails the build rather than
 surfacing as a runtime error in a consumer.
 
+**Current snapshot: `S2026-10`.** The [October refresh](docs/OCTOBER_REFRESH.md)
+contains 70,178 listings and 58,022 products from 15 captured pharmacies, with
+3 explicitly unavailable sources and 3 unknown-stock listings. Historical
+September figures below describe the original baseline, not the current feed.
+The browser masks now use unsigned 32-bit arrays with permanent source bits;
+the JSON field names, existing URL filter bits and physical column types remain
+unchanged. Source bits are distinct from listing-array source indexes.
+
 ---
 
 ## Input: what the scrapers hand over

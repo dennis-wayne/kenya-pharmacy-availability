@@ -12,7 +12,7 @@ test('release identity accepts the exact snapshot and rejects truncation and sam
 test('read model retries a transient response once and validates before parsing',async()=>{
   let attempts=0;globalThis.fetch=async()=>++attempts===1?new Response('',{status:503}):new Response(bytes);
   const progress=[];const meta=await fetchReadModel('meta',value=>progress.push(value));
-  assert.equal(attempts,2);assert.equal(meta.headline.products,43606);assert.equal(progress.at(-1),1);
+  assert.equal(attempts,2);assert.equal(meta.headline.products,JSON.parse(bytes).headline.products);assert.equal(progress.at(-1),1);
 });
 test('read model stops after bounded failures and does not retry identity errors or 404',async()=>{
   let attempts=0;globalThis.fetch=async()=>{attempts++;return new Response('',{status:503});};

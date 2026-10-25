@@ -30,7 +30,9 @@ export function availabilityScenarios(pharmacies) {
       ...rate(
         present.map((p) => ({
           ...p,
-          in_stock: p.publishes_oos ? p.in_stock : p.listings,
+          in_stock: p.publishes_oos
+            ? p.in_stock + Math.max(0, p.listings-p.in_stock-p.out_of_stock)
+            : p.listings,
           out_of_stock: p.publishes_oos ? p.out_of_stock : 0,
         })),
       ),

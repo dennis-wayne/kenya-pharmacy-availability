@@ -20,6 +20,9 @@ export const SHOPS = {
   healthcart: { name: 'Healthcart',        platform: 'Shopify',     method: 'products.json feed',     robots: 'ok' },
   portal:     { name: 'Portal Pharmacy',   platform: 'OpenCart',    method: 'sitemap + category pages', robots: 'ok' },
   healthyu:   { name: 'HealthyU',          platform: 'Angular SPA', method: 'sitemap + JSON API',     robots: 'ok' },
+  pharmaplus: { name: 'PharmaPlus',        platform: 'Next.js', method: 'storefront catalogue API', robots: 'ok' },
+  mydawa:     { name: 'MyDawa',            platform: 'ASP.NET', method: 'storefront catalogue search', robots: 'ok' },
+  faiz:       { name: 'Faiz Pharmacy',     platform: 'WooCommerce', method: 'Store API', robots: 'ok' },
 };
 
 /**
@@ -28,11 +31,9 @@ export const SHOPS = {
  * instead of silently shrinking the denominator -- which is most of why the
  * September in-stock rate looks better than June's.
  */
-export const ABSENT = {
-  pharmaplus: { name: 'PharmaPlus', reason: 'unreachable from this network', last_seen: '2026-06', last_listings: 11821 },
-  faiz:       { name: 'Faiz Pharmacy', reason: 'Sucuri WAF blocks office IP (BLACK02)', last_seen: '2026-06', last_listings: null },
-  mydawa:     { name: 'MyDawa', reason: 'Sucuri WAF blocks office IP (BLACK02)', last_seen: '2026-06', last_listings: null },
-};
+// Missing sources are recorded by ingestion for the actual run. Historical
+// snapshots retain their original absence records in DuckDB.
+export const ABSENT = {};
 
 /* ------------------------------------------------------- feed health rules */
 
@@ -49,18 +50,18 @@ export const SINGLE_STATUS_ROW_FLOOR = 500;
  * shop that does not publish the bit. Counting it as positive evidence is what
  * inflates the network in-stock rate.
  */
-export function assessFeed({ rows, distinctStatuses, inStock, outOfStock, unknown }) {
+export function assessFeed({ rows, distinctStatuses, inStock, outOfStock, unknown, captureComplete = false, verifiedStock = false }) {
   const flags = [];
   let publishes_oos = true;
   let quarantined = false;
 
-  if (rows < MIN_PLAUSIBLE_ROWS) {
+  if (rows < MIN_PLAUSIBLE_ROWS && !captureComplete) {
     flags.push({ rule: 'implausible_row_count', detail: `${rows} rows` });
     quarantined = true;
     publishes_oos = false;
   }
 
-  if (outOfStock === 0 && rows >= SINGLE_STATUS_ROW_FLOOR) {
+  if (outOfStock === 0 && rows >= SINGLE_STATUS_ROW_FLOOR && !verifiedStock) {
     flags.push({ rule: 'no_oos_signal', detail: `${distinctStatuses.length} distinct status value(s) over ${rows} rows` });
     publishes_oos = false;
     quarantined = true;
@@ -70,7 +71,7 @@ export function assessFeed({ rows, distinctStatuses, inStock, outOfStock, unknow
     flags.push({ rule: 'high_unknown_status', detail: `${unknown} unknown of ${rows}` });
   }
 
-  if (inStock === 0 && rows >= SINGLE_STATUS_ROW_FLOOR) {
+  if (inStock === 0 && rows >= SINGLE_STATUS_ROW_FLOOR && !verifiedStock) {
     flags.push({ rule: 'zero_availability', detail: 'feed reports nothing in stock' });
     quarantined = true;
   }

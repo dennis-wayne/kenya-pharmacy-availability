@@ -17,13 +17,15 @@ import { fetchReadModel as getJson } from './read-model.ts';
 const i32 = (a) => Int32Array.from(a, (v) => (v == null ? -1 : v));
 const u8 = (a) => Uint8Array.from(a, (v) => (v == null ? 0 : v));
 const u16 = (a) => Uint16Array.from(a, (v) => (v == null ? 0 : v));
+const u32 = (a) => Uint32Array.from(a, (v) => (v == null ? 0 : v));
 const f64 = (a) => Float64Array.from(a, (v) => (v == null ? NaN : v));
 
 /** Population count — how many pharmacies a bitmask represents. */
 export function popcount(v) {
-  v = v - ((v >> 1) & 0x5555);
-  v = (v & 0x3333) + ((v >> 2) & 0x3333);
-  return ((((v + (v >> 4)) & 0x0f0f) * 0x0101) >> 8) & 0xff;
+  v >>>= 0;
+  v = v - ((v >>> 1) & 0x55555555);
+  v = (v & 0x33333333) + ((v >>> 2) & 0x33333333);
+  return Math.imul((v + (v >>> 4)) & 0x0f0f0f0f,0x01010101) >>> 24;
 }
 
 export async function loadStore(onStage) {
@@ -70,9 +72,9 @@ export async function loadStore(onStage) {
     indications: i32(raw.indications),
     therapeutic: i32(raw.therapeutic),
     hasMonograph: u8(raw.hasMonograph),
-    listedMask: u16(raw.listedMask),
-    inMask: u16(raw.inMask),
-    oosMask: u16(raw.oosMask),
+    listedMask: u32(raw.listedMask),
+    inMask: u32(raw.inMask),
+    oosMask: u32(raw.oosMask),
     categories: raw.categories,
   };
 
@@ -92,7 +94,7 @@ export async function loadStore(onStage) {
   };
 
   const shops = meta.pharmacies.filter((p) => p.present_in_snapshot);
-  shops.forEach((s, i) => { s.bit = i; });
+  shops.forEach((s, i) => { s.bit ??= i; });
 
   return {
     meta,

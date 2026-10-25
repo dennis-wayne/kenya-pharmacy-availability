@@ -166,12 +166,13 @@ export function shopCounts(store, f, dimension) {
   const preds = predicates(store, f);
   const base = sweep(store, preds, dimension);
   const { P } = store;
-  const listed = new Int32Array(store.shops.length);
-  const inStock = new Int32Array(store.shops.length);
-  const oos = new Int32Array(store.shops.length);
+  const sourceSlots = Math.max(0, ...store.shops.map((shop) => shop.bit + 1));
+  const listed = new Int32Array(sourceSlots);
+  const inStock = new Int32Array(sourceSlots);
+  const oos = new Int32Array(sourceSlots);
   for (const i of base) {
     const lm = P.listedMask[i]; const im = P.inMask[i]; const om = P.oosMask[i];
-    for (let b = 0; b < store.shops.length; b++) {
+    for (const { bit: b } of store.shops) {
       const bit = 1 << b;
       if (lm & bit) listed[b]++;
       if (im & bit) inStock[b]++;
@@ -229,7 +230,7 @@ export function sourceBreakdown(store, rows) {
   for (const i of rows) {
     const lm = P.listedMask[i]; const im = P.inMask[i]; const om = P.oosMask[i];
     for (let b = 0; b < shops.length; b++) {
-      const bit = 1 << b;
+      const bit = 1 << shops[b].bit;
       if (lm & bit) out[b].listed++;
       if (im & bit) out[b].inStock++;
       if (om & bit) out[b].oos++;

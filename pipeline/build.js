@@ -50,6 +50,9 @@ const SOURCE = path.resolve(ROOT, opt('--source', '../04_Working Data'));
 const OUT = path.resolve(ROOT, opt('--out', './data'));
 const REBUILD = flag('--rebuild');
 const STRICT = flag('--strict');
+// A release may explicitly document upstream outages while still enforcing
+// strict validation for every source expected to be available.
+const ALLOW_UNAVAILABLE = new Set(opt('--allow-unavailable', '').split(',').filter(Boolean));
 
 const startedAt = new Date();
 const runId = crypto.randomUUID();
@@ -121,13 +124,17 @@ for (const [shopId, meta] of Object.entries(SHOPS)) {
     // One bad shop degrades the run, it does not end it -- mirroring how
     // run_all.py isolates each scraper. A 14-shop dashboard that says so is
     // more useful than no dashboard.
-    shopsFailed++;
+    const unavailableMeta = readScrapeMeta(shopId, SOURCE).meta;
+    const documentedOutage = ALLOW_UNAVAILABLE.has(shopId)
+      && unavailableMeta?.capture_complete === false
+      && Boolean(unavailableMeta.capture_problem);
+    if (!documentedOutage) shopsFailed++;
     const detail = err instanceof IngestError ? err.message : `${err.name}: ${err.message}`;
     warn(`${meta.name}: ${detail}`);
     pharmacies.push({
       snapshot_id: SNAPSHOT_ID, pharmacy_id: shopId, name: meta.name,
       platform: meta.platform, scrape_method: meta.method, robots_posture: meta.robots,
-      present_in_snapshot: false, absent_reason: 'ingest failed',
+      present_in_snapshot: false, absent_reason: readScrapeMeta(shopId, SOURCE).meta?.capture_problem || 'ingest failed',
       listings: 0, rows_in_file: 0, rows_skipped: 0,
       listing_key_strategy: null, listing_key_cardinality: 0,
       duplicate_listing_ids: 0, urls_repaired: 0,
@@ -155,6 +162,8 @@ for (const [shopId, meta] of Object.entries(SHOPS)) {
     inStock: stats.in_stock,
     outOfStock: stats.out_of_stock,
     unknown: stats.unknown_status,
+    captureComplete: stats.capture_complete,
+    verifiedStock: stats.verified_stock,
   });
 
   pharmacies.push({
@@ -480,19 +489,23 @@ await q(`CREATE OR REPLACE VIEW latest_snapshot AS
 
 await q(`CREATE OR REPLACE VIEW observation_history AS
          SELECT o.*, p.publishes_oos, p.quarantined AS pharmacy_quarantined,
-                CASE WHEN NOT p.publishes_oos THEN 'not_published' ELSE o.stock_state END AS stock_evidence
+                CASE WHEN NOT p.publishes_oos OR o.stock_state = 'unknown'
+                     THEN 'not_published' ELSE o.stock_state END AS stock_evidence
          FROM observation o
          JOIN pharmacy_snapshot p USING (snapshot_id, pharmacy_id)`);
 
 // Per-shop scrape time, derived from the fact table rather than stored on
 // pharmacy_snapshot, so it needs no schema change and no rebuild. A shop whose
 // rows disagree on scrape time would show a window rather than an instant.
-await q(`CREATE OR REPLACE VIEW pharmacy_scrape_time AS
+await q(`CREATE OR REPLACE VIEW pharmacy_scrape_time_history AS
          SELECT snapshot_id, pharmacy_id,
                 min(snapshot_at)          AS scraped_at,
                 max(snapshot_at)          AS scraped_at_latest,
                 bool_or(snapshot_at_inferred) AS scraped_at_inferred
          FROM observation GROUP BY 1, 2`);
+await q(`CREATE OR REPLACE VIEW pharmacy_scrape_time AS
+         SELECT * FROM pharmacy_scrape_time_history
+         WHERE snapshot_id = (SELECT snapshot_id FROM latest_snapshot)`);
 
 await q(`CREATE OR REPLACE VIEW product_history AS SELECT * FROM product_snapshot`);
 await q(`CREATE OR REPLACE VIEW pharmacy_history AS SELECT * FROM pharmacy_snapshot`);

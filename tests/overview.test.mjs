@@ -22,7 +22,7 @@ const store = await loadStore();
 const raw = JSON.parse(bytes.products);
 const model = buildOverviewModel(store);
 const bits = (mask) =>
-  Array.from({ length: 16 }, (_, i) => Boolean(mask & (1 << i))).filter(Boolean)
+  Array.from({ length: 32 }, (_, i) => Boolean(mask & (1 << i))).filter(Boolean)
     .length;
 
 test("Overview availability uses rated listing counts and keeps unknown feeds separate", () => {
@@ -39,8 +39,8 @@ test("Overview availability uses rated listing counts and keeps unknown feeds se
     model.scenarios[1].inStock,
     stock + store.meta.headline.not_published,
   );
-  assert.equal(model.reporting.length, 8);
-  assert.equal(model.listedOnly.length, 7);
+  assert.equal(model.reporting.length, reporting.length);
+  assert.equal(model.listedOnly.length, store.shops.length-reporting.length);
   for (const p of model.reporting)
     assert.equal(p.rate, (100 * p.in_stock) / (p.in_stock + p.out_of_stock));
   assert.equal(availabilityScenarios([])[0].rate, null);
@@ -67,13 +67,10 @@ test("Overview clinical queue count matches its complete drill-down and independ
     ).rows,
     model.reportable,
   );
-  assert.equal(model.reportable.length, 36);
   assert.equal(
     model.clinicalMulti,
     raw.key.filter((_, i) => raw.clinical[i] === 1 && raw.nOos[i] >= 2).length,
   );
-  assert.equal(model.clinicalMulti, 52);
-  assert.equal(model.clinicalMulti - model.reportable.length, 16);
 });
 test("Coverage groups partition products and each drill-down preserves exact membership", () => {
   assert.equal(
@@ -97,7 +94,7 @@ test("Coverage groups partition products and each drill-down preserves exact mem
     model.broad.length,
     raw.inMask.filter((mask) => bits(mask) >= 5).length,
   );
-  assert.equal(model.broadClinical.length, 3);
+  assert.equal(model.broadClinical.length,raw.inMask.filter((mask,i)=>bits(mask)>=5&&raw.clinical[i]===1).length);
 });
 test("Price histogram excludes missing/nonpositive values and assigns every boundary once", () => {
   assert.equal(

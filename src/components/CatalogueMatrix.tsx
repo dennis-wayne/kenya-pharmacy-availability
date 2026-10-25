@@ -372,9 +372,9 @@ export default function CatalogueMatrix({
           <footer>
             <Icon name="clock" size={16} />
             <p>
-              Captured snapshot; collection dates are inferred. Confirm current
-              stock and price with the pharmacy. Source groups cover all{" "}
-              {store.shops.length} captured pharmacies.
+              Captured snapshot. Confirm current stock and price with the
+              pharmacy. Source groups cover all {store.shops.length} captured
+              pharmacies.
             </p>
           </footer>
         </article>

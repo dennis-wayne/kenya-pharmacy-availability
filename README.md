@@ -11,6 +11,8 @@ asserts it on every build.
 
 The [Drug Index capture guide](docs/DRUGINDEX_CAPTURE.md) describes the verified local archive, refresh tools and searchable development-only reference library. Full clinical source data stays outside the repository and public bundle.
 
+**Current pharmacy snapshot: October 2026.** [Refresh evidence and limitations](docs/OCTOBER_REFRESH.md): 70,178 listings, 58,022 resolved products, 15 captured sources and 3 explicitly unavailable sources. Stock reporting leaves 3 listings unknown. September data remains historical; the figures in the original design discussion below describe that earlier baseline.
+
 ```bash
 npm install
 npm run pipeline:build # raw JSON -> data/*.parquet + data/kpad.duckdb (local data workspace)
@@ -73,7 +75,7 @@ every facet and redraws every chart with no debounce and no worker.
 
 Three design decisions worth knowing:
 
-- **Bitmask presence.** Fifteen pharmacies fit in a `uint16`, so each product
+- **Bitmask presence.** Permanent pharmacy assignments use a `uint32`, so each product
   carries three masks — listed, in stock, out of stock. Every per-source
   filter, the availability matrix and the coverage plot read those directly.
 - **Cross-filtered facet counts.** A facet's own dimension is excluded when
@@ -92,6 +94,7 @@ across thousands of rows is not reporting 100% availability, it is not
 reporting at all — lives in a view, so it stays re-derivable and arguable.
 Seven September feeds are in that position. Gating them moves the headline from
 **68.9% to 59.7%**.
+For October, a reconciled capture with verified per-record stock fields can report a single state without being mistaken for a parser default. Unsupported or missing stock fields remain unknown.
 
 **2. The shortage ceiling is 8, not 15.** Only 8 feeds publish an out-of-stock
 bit, so no product can cluster above 8 in this snapshot.
@@ -188,6 +191,6 @@ assertions. All exercised in `verify.js`; details in
 
 ## Dashboard CI and releases
 
-The canonical repository is [Charanos/praesto](https://github.com/Charanos/praesto). GitHub Actions uses Node 24 and npm ci, then npm run check:app: type checking, formatting, lint, 29 tests against the versioned snapshot, and production build. It also checks that the build did not alter static/app. npm run check adds the 96 local database assertions and therefore requires the intentionally unversioned analytical database. npm run ci remains the separate source-refresh pipeline; it must not be used to silently promote staged captures for an interface release.
+The canonical repository is [dennis-wayne/praesto](https://github.com/dennis-wayne/praesto). GitHub Actions uses Node 24 and npm ci, then npm run check:app: type checking, formatting, lint, 29 tests against the versioned snapshot, and production build. It also checks that the build did not alter static/app. npm run check adds the 96 local database assertions and therefore requires the intentionally unversioned analytical database. npm run ci remains the separate source-refresh pipeline; it must not be used to silently promote staged captures for an interface release.
 
 The Sources and Data Quality compositions and their limits are documented in docs/revamp/SOURCES_OVERHAUL.md and docs/revamp/QUALITY_OVERHAUL.md. Production reference fields require a licensed, source-qualified adapter; development-only local monographs are not shipped by this release.

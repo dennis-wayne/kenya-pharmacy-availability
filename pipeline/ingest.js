@@ -24,6 +24,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { ROW_WIDTH, ROW_SHAPE } from './config.js';
 import { buildMatchKey, repairUrl, readStockState, cleanText, nullish } from './normalize.js';
 
@@ -92,10 +93,10 @@ export function chooseListingKey(rows) {
   const n = rows.length;
 
   const byUrl = card((r) => (nullish(r[6]) ? null : String(r[6])));
-  if (byUrl / n > 0.99) return { strategy: 'url', cardinality: byUrl };
+  if (byUrl === n) return { strategy: 'url', cardinality: byUrl };
 
   const bySku = card((r) => (nullish(r[8]) ? null : String(r[8])));
-  if (bySku / n > 0.99) return { strategy: 'sku', cardinality: bySku };
+  if (bySku === n) return { strategy: 'sku', cardinality: bySku };
 
   const byUrlName = card((r) => `${r[6]}||${r[0]}`);
   return { strategy: 'url+name', cardinality: byUrlName };
@@ -178,6 +179,11 @@ export function ingestShop({ shopId, sourceDir, snapshotId, snapshotAt }) {
   // and is always flagged, because a file copy resets it.
   const stat = fs.statSync(file);
   const scrapeMeta = readScrapeMeta(shopId, sourceDir);
+  if (scrapeMeta.meta?.capture_complete === false) {
+    throw new IngestError(scrapeMeta.meta.capture_problem || `${shopId}: incomplete capture withheld`);
+  }
+  const proofMatchesFile = scrapeMeta.meta?.canonical_sha256 === createHash('sha256')
+    .update(fs.readFileSync(file)).digest('hex');
   const at = snapshotAt ?? scrapeMeta.at ?? stat.mtime;
   const inferred = !snapshotAt && !scrapeMeta.at;
 
@@ -264,6 +270,12 @@ export function ingestShop({ shopId, sourceDir, snapshotId, snapshotAt }) {
       scrape_meta_problem: scrapeMeta.problem,
       scrape_finished_at: scrapeMeta.meta?.scrape_finished_at ?? null,
       scrape_duration_s: typeof scrapeMeta.meta?.duration_s === 'number' ? scrapeMeta.meta.duration_s : null,
+      capture_complete: proofMatchesFile && scrapeMeta.meta?.capture_complete === true
+        && scrapeMeta.meta.expected_source_records === parsed.length
+        && scrapeMeta.meta.unique_source_records === parsed.length,
+      verified_stock: proofMatchesFile && scrapeMeta.meta?.stock_evidence_verification === 'explicit_per_record'
+        && scrapeMeta.meta.stock_reported_rows === parsed.length
+        && skipped === 0 && dupes === 0,
     },
   };
 }

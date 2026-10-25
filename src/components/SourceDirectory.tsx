@@ -136,7 +136,7 @@ export default function SourceDirectory({
         <span role="status">
           {visible.length} of {sources.length} sources
         </span>
-        <span>Captured listings · collection dates inferred</span>
+        <span>Captured source listings</span>
       </div>
       <div className="source-explorer-surface">
         <div className="source-explorer-columns" aria-hidden="true">
@@ -243,8 +243,8 @@ export default function SourceDirectory({
                   <section>
                     <h3>Collection &amp; evidence</h3>
                     <p>
-                      Collection date is inferred from file timestamps. Confirm
-                      current stock and listed prices with the pharmacy.
+                      Read the snapshot capture date, then confirm current stock
+                      and listed prices with the pharmacy.
                     </p>
                     <div className="source-evidence-totals">
                       <span>
