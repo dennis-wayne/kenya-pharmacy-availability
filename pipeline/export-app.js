@@ -100,7 +100,7 @@ const present = pharmacies.filter((p) => p.present_in_snapshot);
 if(present.length>31)throw new Error('Source masks support at most 31 active pharmacies');
 const bitOf = new Map(present.map((p) => [p.pharmacy_id, sourceBit(p.pharmacy_id)]));
 const shopIndexOf = new Map(present.map((p, i) => [p.pharmacy_id, i]));
-present.forEach((p) => { p.bit = bitOf.get(p.pharmacy_id); });
+pharmacies.forEach((p) => { p.bit = sourceBit(p.pharmacy_id); });
 
 /* --------------------------------------------------------------- products */
 

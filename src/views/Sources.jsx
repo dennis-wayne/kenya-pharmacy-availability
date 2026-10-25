@@ -82,15 +82,15 @@ export default function Sources({ store, onNavigate, setFilters }) {
             <p>Use explicit stock reports.</p>
             <Icon name="right" size={17} />
           </button>
-          <button onClick={() => inspectGroup("listings")}>
+          {(listingOnly.length > 0 || store.absent.length > 0) && <button onClick={() => listingOnly.length ? inspectGroup("listings") : document.getElementById('source-capture-gaps')?.scrollIntoView({behavior:'instant',block:'start'})}>
             <div>
-              <span>Listing only</span>
-              <b className="num">{listingOnly.length}</b>
+              <span>{listingOnly.length ? 'Listing only' : 'Capture gaps'}</span>
+              <b className="num">{listingOnly.length || store.absent.length}</b>
             </div>
-            <PharmacyStack shops={listingOnly} limit={small ? 3 : 5} />
-            <p>Stock remains unknown.</p>
+            <PharmacyStack shops={listingOnly.length ? listingOnly : store.absent} limit={small ? 3 : 5} />
+            <p>{listingOnly.length ? 'Stock remains unknown.' : 'Review unavailable source captures.'}</p>
             <Icon name="right" size={17} />
-          </button>
+          </button>}
         </div>
       </section>
       <SourceDirectory
@@ -109,7 +109,7 @@ export default function Sources({ store, onNavigate, setFilters }) {
         onLimits={() => onNavigate("quality")}
       />
       {store.absent.length > 0 && (
-        <section className="source-gap-section">
+        <section className="source-gap-section" id="source-capture-gaps">
           <header className="source-section-heading" data-align="right">
             <div>
               <h2>Keep the missing captures visible.</h2>

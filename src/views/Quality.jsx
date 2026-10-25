@@ -92,6 +92,9 @@ export default function Quality({ store, onNavigate, setFilters }) {
   const quarantined = meta.pharmacies.filter(
     (p) => p.present_in_snapshot && p.quarantined,
   );
+  const unreported = meta.pharmacies.filter(source => source.present_in_snapshot)
+    .map(source => ({ ...source, unreported: source.publishes_oos ? source.unknown_status : source.listings }))
+    .filter(source => source.unreported > 0);
   const confidence = D.matchBand
     .map((label, index) => ({ label, index, n: stats.byMatch[index] ?? 0 }))
     .sort((a, b) => b.n - a.n);
@@ -540,7 +543,7 @@ export default function Quality({ store, onNavigate, setFilters }) {
         <Heading
           title="Unknown stock stays outside the rate."
           right
-          description="These sources do not publish usable stock states. Their listings remain searchable, but listing presence is not evidence that a product is available."
+          description="Stock can be missing for individual listings within an otherwise reporting pharmacy. Listing presence alone is not evidence of availability."
         />
         <div className="quality-stock-boundary">
           <aside>
@@ -568,7 +571,7 @@ export default function Quality({ store, onNavigate, setFilters }) {
               </summary>
               <p>
                 The rate would become{" "}
-                <b className="num">{n1(h.in_stock_rate_raw)}%</b>. This
+                <b className="num">{n1(100 * (h.in_stock + h.not_published) / Math.max(1,h.listings))}%</b>. This
                 assumption adds positive evidence that the sources did not
                 provide.
               </p>
@@ -576,25 +579,25 @@ export default function Quality({ store, onNavigate, setFilters }) {
           </aside>
           <div className="quality-excluded-ledger">
             <header>
-              <h3>{quarantined.length} listing-only sources</h3>
+              <h3>{unreported.length} sources with unknown stock</h3>
               <button onClick={() => onNavigate("sources")}>
                 Inspect sources
                 <Icon name="right" size={14} />
               </button>
             </header>
-            {quarantined.map((source) => (
+            {unreported.map((source) => (
               <details key={source.pharmacy_id}>
                 <summary>
                   <PharmacyGlyph id={source.pharmacy_id} size={30} />
                   <span>{source.name}</span>
-                  <strong className="num">{n0(source.listings)}</strong>
+                  <strong className="num">{n0(source.unreported)}</strong>
                   <Icon name="down" size={14} />
                 </summary>
                 <div>
                   <EvidenceBadge tone="neutral">
-                    Stock not reported
+                    {source.publishes_oos ? 'Partially reported' : 'Stock not reported'}
                   </EvidenceBadge>
-                  <p>{source.health_detail}</p>
+                  <p>{n0(source.unreported)} of {n0(source.listings)} captured listings lack usable stock evidence and are excluded from the rate.</p>
                   <button onClick={() => jump({ shopsAny: [source.bit] })}>
                     Browse {source.name} listings
                     <Icon name="right" size={14} />
@@ -602,6 +605,7 @@ export default function Quality({ store, onNavigate, setFilters }) {
                 </div>
               </details>
             ))}
+            {!unreported.length && <p>Every captured listing has a usable stock state in this snapshot.</p>}
           </div>
         </div>
       </section>

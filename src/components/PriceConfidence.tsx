@@ -48,6 +48,16 @@ export default function PriceConfidence({
   const selected =
     model.scenarios.find((s) => s.key === basis) ?? model.scenarios[0];
   const headline = model.scenarios[0];
+  const delta =
+    selected.rate != null && headline.rate != null
+      ? selected.rate - headline.rate
+      : null;
+  const precise = delta != null && delta !== 0 && Math.abs(delta) < 0.1;
+  const deltaLabel = (rate: number | null) => {
+    if (rate == null || headline.rate == null) return "Unknown";
+    const change = rate - headline.rate;
+    return `${change > 0 ? "+" : ""}${change.toFixed(change !== 0 && Math.abs(change) < 0.1 ? 3 : 1)} pp`;
+  };
   return (
     <div className="price-confidence">
       <article className="price-landscape">
@@ -215,19 +225,79 @@ export default function PriceConfidence({
           <Icon name="down" size={17} />
         </summary>
         <div
+          className="sensitivity-result"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div>
+            <span>
+              {selected.key === "reporting"
+                ? "Reported availability"
+                : "Scenario estimate"}
+            </span>
+            <h3>{selected.label}</h3>
+            <p>{selected.note}</p>
+          </div>
+          <div className="sensitivity-result-value">
+            <strong className="num">
+              {selected.rate == null
+                ? "Unknown"
+                : `${selected.rate.toFixed(precise ? 3 : 1)}%`}
+            </strong>
+            <span>
+              {selected.key === "reporting"
+                ? "Reported baseline"
+                : `${deltaLabel(selected.rate)} versus reported`}
+            </span>
+          </div>
+          <div
+            className="sensitivity-result-mix"
+            role="img"
+            aria-label={`${n0(selected.inStock)} treated as in stock, ${n0(selected.total - selected.inStock)} out of stock, of ${n0(selected.total)} listings in this calculation`}
+          >
+            <span style={{ width: `${selected.rate ?? 0}%` }} />
+          </div>
+          <div className="sensitivity-result-counts">
+            <span>
+              <b className="num">{n0(selected.inStock)}</b>{" "}
+              {selected.key === "all"
+                ? "treated as in stock"
+                : "reported in stock"}
+            </span>
+            <span>
+              <b className="num">{n0(selected.total)}</b> listings in this
+              calculation
+            </span>
+          </div>
+          <div className="sensitivity-result-actions">
+            <button className="brief-link" onClick={onQuality}>
+              Inspect calculation limits <Icon name="right" size={14} />
+            </button>
+            {selected.key !== "reporting" && (
+              <button
+                className="brief-link"
+                onClick={() => onBasis("reporting")}
+              >
+                Reset to reported basis
+              </button>
+            )}
+          </div>
+        </div>
+        <div
           className="sensitivity-options"
-          role="group"
+          role="radiogroup"
           aria-label="Availability calculation comparison"
         >
           {model.scenarios.map((s) => (
-            <button
-              key={s.key}
-              aria-pressed={basis === s.key}
-              onClick={() => onBasis(s.key)}
-            >
-              <span className="sensitivity-selection" aria-hidden="true">
-                {basis === s.key && <i />}
-              </span>
+            <label key={s.key}>
+              <input
+                className="sensitivity-selection"
+                type="radio"
+                name="availability-basis"
+                value={s.key}
+                checked={selected.key === s.key}
+                onChange={() => onBasis(s.key)}
+              />
               <span className="sensitivity-identity">
                 <strong>{s.label}</strong>
                 <small>
@@ -240,17 +310,14 @@ export default function PriceConfidence({
                 {s.rate == null ? "Unknown" : `${n1(s.rate)}%`}
               </span>
               <span className="sensitivity-delta num">
-                {s.key === "reporting"
-                  ? "Baseline"
-                  : s.rate == null || headline.rate == null
-                    ? "Unknown"
-                    : `${s.rate - headline.rate >= 0 ? "+" : ""}${n1(s.rate - headline.rate)} pp`}
+                {s.key === "reporting" ? "Baseline" : deltaLabel(s.rate)}
               </span>
-            </button>
+            </label>
           ))}
         </div>
-        <p className="sensitivity-note" aria-live="polite">
-          {selected.note} pp means percentage points.
+        <p className="sensitivity-note">
+          pp means percentage points. Scenario estimates do not replace the
+          reported headline or change captured stock records.
         </p>
       </details>
     </div>

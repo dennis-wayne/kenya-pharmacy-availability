@@ -158,33 +158,36 @@ export default function SourceNetwork({
         Rates use in-stock ÷ rated listings. Different catalogues and collection
         coverage mean these figures do not measure pharmacy quality.
       </p>
-      <div className="source-listing-only">
-        <header>
-          <h3>Listed, without a stock signal</h3>
-          <span className="num">
-            {model.listedOnly.length} sources ·{" "}
-            {n0(model.listedOnly.reduce((sum, s) => sum + s.listings, 0))}{" "}
-            listings
-          </span>
-        </header>
-        <p>
-          Excluded from stock rates. Their captured products remain searchable.
-        </p>
-        <div className="source-listing-links">
-          {model.listedOnly.map((source) => (
-            <button
-              key={source.pharmacy_id}
-              onClick={() => onBrowse(source.bit)}
-              aria-label={`Browse ${source.name}, ${n0(source.listings)} captured listings without usable stock reports`}
-            >
-              <PharmacyGlyph id={source.pharmacy_id} size={26} />
-              <span>{source.name}</span>
-              <b className="num">{n0(source.listings)}</b>
-              <Icon name="right" size={13} />
-            </button>
-          ))}
+      {model.listedOnly.length > 0 && (
+        <div className="source-listing-only">
+          <header>
+            <h3>Listed, without a stock signal</h3>
+            <span className="num">
+              {model.listedOnly.length} sources ·{" "}
+              {n0(model.listedOnly.reduce((sum, s) => sum + s.listings, 0))}{" "}
+              listings
+            </span>
+          </header>
+          <p>
+            Excluded from stock rates. Their captured products remain
+            searchable.
+          </p>
+          <div className="source-listing-links">
+            {model.listedOnly.map((source) => (
+              <button
+                key={source.pharmacy_id}
+                onClick={() => onBrowse(source.bit)}
+                aria-label={`Browse ${source.name}, ${n0(source.listings)} captured listings without usable stock reports`}
+              >
+                <PharmacyGlyph id={source.pharmacy_id} size={26} />
+                <span>{source.name}</span>
+                <b className="num">{n0(source.listings)}</b>
+                <Icon name="right" size={13} />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <p className="source-network-absent">
         Absent from this snapshot:{" "}
         {absent.map((source) => source.name).join(", ") || "none"}. Absence does

@@ -311,7 +311,20 @@
   background: var(--surface);
   margin-bottom: var(--s-3);
 }
-.sensitivity-options > button {
+.sensitivity-result { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px 28px; padding:24px; margin:8px 0 20px; border-radius:14px; background:var(--surface); }
+.sensitivity-result > div:first-child > span { color:var(--ink-3); font-size:var(--text-sm); }
+.sensitivity-result h3 { margin-top:6px; font-family:var(--serif); font-weight:400; font-size:24px; }
+.sensitivity-result p { margin:8px 0 0; max-width:65ch; color:var(--ink-2); font-size:var(--text-sm); line-height:1.7; }
+.sensitivity-result-value { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+.sensitivity-result-value strong { font-size:clamp(28px,4vw,40px); line-height:1.2; font-weight:400; letter-spacing:-.04em; color:var(--teal); }
+.sensitivity-result-value > span { font-size:var(--text-sm); color:var(--ink-3); }
+.sensitivity-result-mix { grid-column:1/-1; height:8px; border-radius:9px; overflow:hidden; background:var(--out-on-inverse); }
+.sensitivity-result-mix > span { display:block; height:100%; background:var(--teal); transition:width .18s ease; }
+.sensitivity-result-counts, .sensitivity-result-actions { grid-column:1/-1; display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px 24px; font-size:var(--text-sm); color:var(--ink-2); }
+.sensitivity-result-actions .brief-link { min-height:32px; display:inline-flex; align-items:center; gap:8px; font-size:var(--text-sm); }
+@media(max-width:620px) { .sensitivity-result { grid-template-columns:minmax(0,1fr); padding:18px; }.sensitivity-result-value { align-items:flex-start; } }
+@media(prefers-reduced-motion:reduce) { .sensitivity-result-mix > span { transition:none; } }
+.sensitivity-options > label {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) 85px 85px;
   gap: var(--s-4-5);
@@ -320,11 +333,15 @@
   min-height: 80px;
   padding-block: 14px;
   text-align: left;
+  cursor:pointer;
 }
-.sensitivity-options > button + button {
+.sensitivity-options > label + label {
   border-top: 1px solid var(--line);
 }
 .sensitivity-selection {
+  appearance:none;
+  flex-shrink:0;
+  margin:0;
   display: grid;
   place-items: center;
   width: 16px;
@@ -332,13 +349,14 @@
   border: 1px solid var(--ink-4);
   border-radius: 50%;
 }
-.sensitivity-selection i {
+.sensitivity-selection:checked::after {
+  content:"";
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--teal);
 }
-.sensitivity-options > button[aria-pressed="true"] .sensitivity-selection {
+.sensitivity-selection:checked {
   border-color: var(--teal);
 }
 .sensitivity-identity strong {
@@ -520,7 +538,7 @@
   .sensitivity-options {
     padding-inline: 14px;
   }
-  .sensitivity-options > button {
+  .sensitivity-options > label {
     grid-template-columns: 18px minmax(0, 1fr);
     gap: var(--s-2) var(--s-3);
   }

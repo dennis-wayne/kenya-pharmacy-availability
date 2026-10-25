@@ -224,7 +224,7 @@ export default function Overview({
       icon: "medical-alert",
       label: "Clinical stockout reports",
       count: model.reportable.length,
-      title: "Repeated clinical stockouts.",
+      title: "Repeated stockout reports.",
       text: "Medicines and devices reported out of stock by at least two sources, with high or medium matching confidence and no review flag.",
       action: "Review these products",
       go: () => jump(model.clinicalPatch),

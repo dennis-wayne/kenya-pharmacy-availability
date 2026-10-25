@@ -6,6 +6,7 @@ import {
   type ClinicalRecord,
 } from "../lib/clinical";
 import { Icon } from "./icons";
+import { useToast } from "./Toast";
 type ReaderState =
   | { status: "loading" }
   | { status: "missing" }
@@ -53,6 +54,7 @@ const groups = [
 ];
 
 export default function ClinicalReader({ ingredient }: { ingredient: string }) {
+  const notify = useToast();
   const [state, setState] = useState<ReaderState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -62,16 +64,27 @@ export default function ClinicalReader({ ingredient }: { ingredient: string }) {
     setState({ status: "loading" });
     loadClinicalRecord(ingredient, controller.signal)
       .then((record) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
           setState(
             record ? { status: "ready", record } : { status: "missing" },
           );
+          if (record && attempt > 0)
+            notify({ title: "Reference loaded", key: "clinical-load" });
+        }
       })
       .catch(() => {
-        if (!controller.signal.aborted) setState({ status: "error" });
+        if (!controller.signal.aborted) {
+          setState({ status: "error" });
+          notify({
+            tone: "error",
+            title: "Clinical reference could not load",
+            description: "Retry the reference in this panel.",
+            key: "clinical-load",
+          });
+        }
       });
     return () => controller.abort();
-  }, [ingredient, attempt, expanded]);
+  }, [ingredient, attempt, expanded, notify]);
 
   return (
     <section

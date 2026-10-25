@@ -248,6 +248,8 @@ export function activeChips(f, store) {
   const D = store?.D;
   const chips = [];
   const add = (key, label, clear) => chips.push({ key, label, clear });
+  const sourceName = (bit) => store?.meta?.pharmacies?.find((source) => source.bit === bit)?.name
+    ?? store?.shops.find((source) => source.bit === bit)?.name ?? bit;
 
   if (f.q.trim()) add('q', `"${f.q.trim()}"`, { q: '' });
   if (f.clinicalOnly) add('clinicalOnly', 'Medicines & devices', { clinicalOnly: false });
@@ -262,14 +264,14 @@ export function activeChips(f, store) {
   if (f.review !== 'all') add('review', f.review === 'auto' ? 'Automatic classification' : 'Needs review', { review: 'all' });
   if (f.monograph !== 'all') add('mono', f.monograph === 'with' ? 'Reference-linked' : 'No reference link', { monograph: 'all' });
   if (f.contested) add('contested', 'Contested class', { contested: false });
-  for (const s of f.shopsAny) add(`any:${s}`, `in ${store?.shops[s]?.name ?? s}`, { shopsAny: f.shopsAny.filter((x) => x !== s) });
-  for (const s of f.shopsAll) add(`all:${s}`, `all of ${store?.shops[s]?.name ?? s}`, { shopsAll: f.shopsAll.filter((x) => x !== s) });
+  for (const s of f.shopsAny) add(`any:${s}`, `in ${sourceName(s)}`, { shopsAny: f.shopsAny.filter((x) => x !== s) });
+  for (const s of f.shopsAll) add(`all:${s}`, `all of ${sourceName(s)}`, { shopsAll: f.shopsAll.filter((x) => x !== s) });
   const reporting = store?.shops.filter(shop => shop.publishes_oos).map(shop => shop.bit);
   const fullReporting = bits => reporting?.length && bits.length === reporting.length && reporting.every(bit => bits.includes(bit));
   if (fullReporting(f.stockIn)) add('in:any', 'In stock somewhere', { stockIn: [] });
-  else for (const s of f.stockIn) add(`in:${s}`, `in stock @ ${store?.shops[s]?.name ?? s}`, { stockIn: f.stockIn.filter((x) => x !== s) });
+  else for (const s of f.stockIn) add(`in:${s}`, `in stock @ ${sourceName(s)}`, { stockIn: f.stockIn.filter((x) => x !== s) });
   if (fullReporting(f.stockOut)) add('out:any', 'Out of stock somewhere', { stockOut: [] });
-  else for (const s of f.stockOut) add(`out:${s}`, `out @ ${store?.shops[s]?.name ?? s}`, { stockOut: f.stockOut.filter((x) => x !== s) });
+  else for (const s of f.stockOut) add(`out:${s}`, `out @ ${sourceName(s)}`, { stockOut: f.stockOut.filter((x) => x !== s) });
   if (f.listedMin || f.listedMax) add('listed', `listed ${f.listedMin || 0}–${f.listedMax || '∞'}`, { listedMin: 0, listedMax: 0 });
   if (f.oosMin || f.oosMax) add('oos', `OOS ${f.oosMin || 0}–${f.oosMax || '∞'}`, { oosMin: 0, oosMax: 0 });
   if (f.priceMin != null || f.priceMax != null) {

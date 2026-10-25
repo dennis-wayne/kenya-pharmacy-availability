@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { loadStore, loadListings, listingsFor, popcount } from '../src/lib/store.js';
-import { EMPTY, runFilter, encodeFilters, decodeFilters, facetCounts, inStockCoverage, shopCounts, sourceBreakdown } from '../src/lib/filters.js';
+import { EMPTY, runFilter, encodeFilters, decodeFilters, facetCounts, inStockCoverage, shopCounts, sourceBreakdown, activeChips } from '../src/lib/filters.js';
 import { buildCsv } from '../src/lib/export.js';
 const payloads = Object.fromEntries(await Promise.all(['meta','products','listings'].map(async name => [name, JSON.parse(await readFile(new URL(`../static/app/${name}.json`, import.meta.url), 'utf8'))])));
 const calls = [];
@@ -50,6 +50,14 @@ test('source facets use permanent bits even when absent sources leave gaps',()=>
     assert.deepEqual(actual({shopsAny:[source.bit]}),expected(i=>(store.P.listedMask[i]&bit)!==0));
     assert.equal(breakdown.find(r=>r.shop.pharmacy_id===source.pharmacy_id).listed,counts.listed[source.bit]);
   }
+});
+test('selected source labels resolve permanent IDs independently of row order and absence',()=>{
+  const fixture={shops:[{bit:16,name:'MyDawa'}],meta:{pharmacies:[{bit:14,name:'OneStop Pharmacy'},{bit:16,name:'MyDawa'}]}};
+  for(const dimension of ['shopsAny','shopsAll','stockIn','stockOut']){
+    const chips=activeChips({...EMPTY,[dimension]:[16]},fixture);
+    assert.ok(chips[0].label.includes('MyDawa'),dimension);
+  }
+  assert.equal(activeChips({...EMPTY,shopsAny:[14]},fixture)[0].label,'in OneStop Pharmacy');
 });
 test('listing source indexes resolve separately from source filter bits',async()=>{
   await loadListings(store);const counts=new Map();

@@ -10,6 +10,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Modal from '../components/Modal.tsx';
+import { useToast } from '../components/Toast';
 import CatalogueToolbar from '../components/CatalogueToolbar';
 import { catalogueContext } from '../lib/catalogue-context';
 import CatalogueResultRow from '../components/CatalogueResultRow';
@@ -482,6 +483,7 @@ function Row({ store, i, template, columns, active, onSelect, onMove, tip, analy
 /* --------------------------------------------------------------- detail - */
 
 function Detail({ store, i, onClose, onPick, tip }) {
+  const notify = useToast();
   const { P, D } = store;
 
   // Same molecule, ranked by how many sources actually have it. Capped: a long
@@ -511,10 +513,10 @@ function Detail({ store, i, onClose, onPick, tip }) {
     setLoading(true);
     setListingError(false);
     loadListings(store)
-      .then(() => { if (alive) { setListings(listingsFor(store, i)); setLoading(false); } })
-      .catch(() => { if (alive) { setLoading(false); setListingError(true); } });
+      .then(() => { if (alive) { setListings(listingsFor(store, i)); setLoading(false); if (attempt > 0) notify({ title: 'Pharmacy reports loaded', key: 'source-listings' }); } })
+      .catch(() => { if (alive) { setLoading(false); setListingError(true); notify({ tone: 'error', title: 'Pharmacy reports could not load', description: 'Use Retry source listings in this panel.', key: 'source-listings' }); } });
     return () => { alive = false; };
-  }, [store, i, attempt]);
+  }, [store, i, attempt, notify]);
 
   const band = D.band[P.band[i]];
   const [section, setSection] = useState('product-listings');

@@ -254,6 +254,8 @@ export function ConsoleTopbar({
   onSearch,
   onHome,
   onExport,
+  onCopyLink,
+  exporting = false,
   exportReady = true,
   snapshot,
 }: {
@@ -262,6 +264,8 @@ export function ConsoleTopbar({
   onSearch: (query: string) => void;
   onHome: () => void;
   onExport: () => void;
+  onCopyLink?: () => void;
+  exporting?: boolean;
   exportReady?: boolean;
   snapshot: Snapshot;
 }) {
@@ -322,13 +326,24 @@ export function ConsoleTopbar({
                 : "Source collection date"}
           </small>
         </span>
+        {onCopyLink && (
+          <button
+            className="console-copy-link"
+            onClick={onCopyLink}
+            aria-label="Copy link to this view"
+            title="Copy link to this view"
+          >
+            <Icon name="link" size={17} />
+          </button>
+        )}
         <button
           className="btn console-export"
           onClick={onExport}
           disabled={!exportReady}
+          aria-busy={exporting}
         >
           <Icon name="download" size={15} className="" />
-          <span>Export</span>
+          <span>{exporting ? "Preparing…" : "Export"}</span>
         </button>
       </div>
     </header>

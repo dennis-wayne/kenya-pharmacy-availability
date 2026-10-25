@@ -139,8 +139,8 @@ export default function OverviewHero({
           listings
         </span>
         <span>
-          {h.pharmacies} sources · {model.listedOnly.length} without usable
-          stock signals
+          {h.pharmacies} captured sources · {n0(h.not_published)} unknown-stock
+          listings
         </span>
       </div>
       <div className="availability-states">
@@ -152,7 +152,10 @@ export default function OverviewHero({
               </span>
               <h3>{state.name}</h3>
               <span className="availability-share num">
-                {n1((100 * state.value) / h.listings)}%
+                {state.value > 0 && (100 * state.value) / h.listings < 0.1
+                  ? "<0.1"
+                  : n1((100 * state.value) / h.listings)}
+                %
               </span>
             </header>
             <b className="availability-state-value num">{n0(state.value)}</b>
